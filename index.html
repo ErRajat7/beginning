@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helicopter Flyer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #1e90ff, #87CEEB);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        #helicopter {
+            position: absolute;
+            width: 80px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40"><rect x="20" y="15" width="40" height="10" fill="%23333"/><rect x="10" y="12" width="60" height="3" fill="%23444"/><rect x="30" y="5" width="5" height="10" fill="%23555"/><ellipse cx="30" cy="5" rx="20" ry="2" fill="%23666"/><rect x="55" y="12" width="20" height="2" fill="%23444"/><rect x="15" y="25" width="10" height="5" fill="%23444"/><rect x="55" y="25" width="10" height="5" fill="%23444"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+            transition: transform 0.1s ease-in-out;
+            z-index: 10;
+        }
+        
+        .pole {
+            position: absolute;
+            width: 50px;
+            background-color: #2E8B57;
+            border-radius: 5px;
+            border: 2px solid #006400;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            background-image: linear-gradient(to right, #2E8B57, #3CB371, #2E8B57);
+        }
+        
+        .pole:after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 15px;
+            background-color: #8B4513;
+            left: -5px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .pole-top:after {
+            bottom: 0;
+        }
+        
+        .pole-bottom:after {
+            top: 0;
+        }
+        
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+        }
+        
+        .cloud {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 30;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 30;
+            display: none;
+        }
+        
+        #game-over h2 {
+            color: #ff4500;
+            margin-bottom: 10px;
+        }
+        
+        #final-score {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        /* Mobile controls */
+        #mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 20;
+        }
+        
+        #mobile-jump {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: inline-block;
+            line-height: 80px;
+            font-size: 24px;
+            color: #333;
+        }
+        
+        @media (max-width: 768px) {
+            #game-container {
+                height: 400px;
+            }
+            
+            #mobile-controls {
+                display: block;
+            }
+            
+            #helicopter {
+                width: 60px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="helicopter"></div>
+        <div id="score">Score: 0</div>
+        
+        <div id="menu">
+            <h2>Helicopter Flyer</h2>
+            <p>Press Space or Up Arrow to fly</p>
+            <button id="start-button">Start Game</button>
+        </div>
+        
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <div id="final-score">Score: 0</div>
+            <button id="restart-button">Restart Game</button>
+        </div>
+        
+        <div id="mobile-controls">
+            <div id="mobile-jump">TAP</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gameContainer = document.getElementById('game-container');
+            const helicopter = document.getElementById('helicopter');
+            const scoreDisplay = document.getElementById('score');
+            const menu = document.getElementById('menu');
+            const gameOver = document.getElementById('game-over');
+            const finalScore = document.getElementById('final-score');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const mobileJump = document.getElementById('mobile-jump');
+            
+            // Game variables
+            let gameRunning = false;
+            let score = 0;
+            let gravity = 0.5;
+            let helicopterVelocity = 0;
+            let helicopterPosition = 250;
+            let lift = -8;
+            let gameSpeed = 3;
+            let poleGap = 200;
+            let minPoleHeight = 50;
+            let maxPoleHeight = 250;
+            let poles = [];
+            let clouds = [];
+            let lastPoleTime = 0;
+            let poleInterval = 1500;
+            let lastCloudTime = 0;
+            let cloudInterval = 2000;
+            
+            // Set initial helicopter position
+            helicopter.style.left = '100px';
+            helicopter.style.top = `${helicopterPosition}px`;
+            
+            // Start game function
+            function startGame() {
+                menu.style.display = 'none';
+                gameOver.style.display = 'none';
+                gameRunning = true;
+                score = 0;
+                scoreDisplay.textContent = `Score: ${score}`;
+                helicopterPosition = 250;
+                helicopterVelocity = 0;
+                poles = [];
+                clouds = [];
+                gameSpeed = 3;
+                poleInterval = 1500;
+                
+                // Remove existing poles and clouds
+                document.querySelectorAll('.pole, .cloud').forEach(element => {
+                    element.remove();
+                });
+                
+                // Start game loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Game loop
+            function gameLoop(timestamp) {
+                if (!gameRunning) return;
+                
+                // Update helicopter position
+                helicopterVelocity += gravity;
+                helicopterPosition += helicopterVelocity;
+                
+                // Limit helicopter position
+                if (helicopterPosition < 0) {
+                    helicopterPosition = 0;
+                    helicopterVelocity = 0;
+                }
+                
+                if (helicopterPosition > gameContainer.offsetHeight - helicopter.offsetHeight) {
+                    gameOver.style.display = 'block';
+                    finalScore.textContent = `Score: ${score}`;
+                    gameRunning = false;
+                    return;
+                }
+                
+                // Update helicopter display
+                helicopter.style.top = `${helicopterPosition}px`;
+                
+                // Rotate helicopter based on velocity
+                const rotation = Math.min(Math.max(helicopterVelocity * 2, -30), 30);
+                helicopter.style.transform = `rotate(${rotation}deg)`;
+                
+                // Generate poles
+                if (timestamp - lastPoleTime > poleInterval) {
+                    const topPoleHeight = Math.floor(Math.random() * (maxPoleHeight - minPoleHeight + 1)) + minPoleHeight;
+                    
+                    const topPole = document.createElement('div');
+                    topPole.className = 'pole pole-top';
+                    topPole.style.height = `${topPoleHeight}px`;
+                    topPole.style.left = `${gameContainer.offsetWidth}px`;
+                    topPole.style.top = '0';
+                    gameContainer.appendChild(topPole);
+                    
+                    const bottomPole = document.createElement('div');
+                    bottomPole.className = 'pole pole-bottom';
+                    bottomPole.style.height = `${gameContainer.offsetHeight - topPoleHeight - poleGap}px`;
+                    bottomPole.style.left = `${gameContainer.offsetWidth}px`;
+                    bottomPole.style.bottom = '0';
+                    gameContainer.appendChild(bottomPole);
+                    
+                    poles.push({
+                        top: topPole,
+                        bottom: bottomPole,
+                        passed: false
+                    });
+                    
+                    lastPoleTime = timestamp;
+                    
+                    // Increase difficulty
+                    poleInterval = Math.max(poleInterval - 10, 1000);
+                    gameSpeed += 0.01;
+                }
+                
+                // Generate clouds
+                if (timestamp - lastCloudTime > cloudInterval) {
+                    const cloud = document.createElement('div');
+                    cloud.className = 'cloud';
+                    cloud.style.width = `${Math.random() * 100 + 50}px`;
+                    cloud.style.height = `${Math.random() * 40 + 20}px`;
+                    cloud.style.top = `${Math.random() * (gameContainer.offsetHeight - 100)}px`;
+                    cloud.style.left = `${gameContainer.offsetWidth}px`;
+                    cloud.style.opacity = `${Math.random() * 0.5 + 0.3}`;
+                    gameContainer.appendChild(cloud);
+                    
+                    clouds.push(cloud);
+                    
+                    lastCloudTime = timestamp;
+                }
+                
+                // Move poles
+                poles.forEach((pole, index) => {
+                    const poleLeft = parseInt(pole.top.style.left) - gameSpeed;
+                    pole.top.style.left = `${poleLeft}px`;
+                    pole.bottom.style.left = `${poleLeft}px`;
+                    
+                    // Check for score
+                    if (!pole.passed && poleLeft + pole.top.offsetWidth < 100) {
+                        score++;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        pole.passed = true;
+                    }
+                    
+                    // Check for collision
+                    if (checkCollision(helicopter, pole.top) || checkCollision(helicopter, pole.bottom)) {
+                        gameOver.style.display = 'block';
+                        finalScore.textContent = `Score: ${score}`;
+                        gameRunning = false;
+                        return;
+                    }
+                    
+                    // Remove poles that are off-screen
+                    if (poleLeft + pole.top.offsetWidth < 0) {
+                        pole.top.remove();
+                        pole.bottom.remove();
+                        poles.splice(index, 1);
+                    }
+                });
+                
+                // Move clouds
+                clouds.forEach((cloud, index) => {
+                    const cloudLeft = parseInt(cloud.style.left) - (gameSpeed * 0.5);
+                    cloud.style.left = `${cloudLeft}px`;
+                    
+                    // Remove clouds that are off-screen
+                    if (cloudLeft + cloud.offsetWidth < 0) {
+                        cloud.remove();
+                        clouds.splice(index, 1);
+                    }
+                });
+                
+                // Continue game loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Check for collision
+            function checkCollision(element1, element2) {
+                const rect1 = element1.getBoundingClientRect();
+                const rect2 = element2.getBoundingClientRect();
+                
+                return !(
+                    rect1.right < rect2.left + 5 ||
+                    rect1.left > rect2.right - 5 ||
+                    rect1.bottom < rect2.top + 5 ||
+                    rect1.top > rect2.bottom - 5
+                );
+            }
+            
+            // Event listeners
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', function(event) {
+                if ((event.code === 'Space' || event.code === 'ArrowUp') && gameRunning) {
+                    helicopterVelocity = lift;
+                    event.preventDefault();
+                }
+            });
+            
+            // Mobile controls
+            mobileJump.addEventListener('touchstart', function(event) {
+                if (gameRunning) {
+                    helicopterVelocity = lift;
+                    event.preventDefault();
+                }
+            });
+            
+            // Click controls for testing
+            gameContainer.addEventListener('mousedown', function(event) {
+                if (gameRunning) {
+                    helicopterVelocity = lift;
+                }
+            });
+            
+            // Create initial clouds
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.width = `${Math.random() * 100 + 50}px`;
+                cloud.style.height = `${Math.random() * 40 + 20}px`;
+                cloud.style.top = `${Math.random() * (gameContainer.offsetHeight - 100)}px`;
+                cloud.style.left = `${Math.random() * gameContainer.offsetWidth}px`;
+                cloud.style.opacity = `${Math.random() * 0.5 + 0.3}`;
+                gameContainer.appendChild(cloud);
+                
+                clouds.push(cloud);
+            }
+            
+            // Create more realistic helicopter
+            const createRealisticHelicopter = () => {
+                helicopter.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40">
+                    <!-- Main body -->
+                    <ellipse cx="40" cy="25" rx="25" ry="10" fill="#333" />
+                    <ellipse cx="40" cy="25" rx="23" ry="9" fill="#444" />
+                    
+                    <!-- Cockpit -->
+                    <path d="M65,25 Q75,20 70,15 Q65,10 55,15 L55,25 Z" fill="#666" />
+                    <path d="M65,25 Q75,30 70,35 Q65,40 55,35 L55,25 Z" fill="#555" />
+                    
+                    <!-- Tail -->
+                    <path d="M15,25 L5,20 L5,30 L15,25 Z" fill="#444" />
+                    <rect x="15" y="24" width="10" height="2" fill="#555" />
+                    
+                    <!-- Main rotor -->
+                    <rect x="38" y="15" width="4" height="5" fill="#222" />
+                    <rect x="10" y="14" width="60" height="1" fill="#111" />
+                    
+                    <!-- Tail rotor -->
+                    <rect x="5" y="22" width="1" height="6" fill="#222" />
+                    <rect x="2" y="24" width="6" height="1" fill="#111" />
+                    
+                    <!-- Windows -->
+                    <ellipse cx="60" cy="22" rx="5" ry="3" fill="#99CCFF" opacity="0.7" />
+                    <ellipse cx="50" cy="22" rx="3" ry="2" fill="#99CCFF" opacity="0.7" />
+                    
+                    <!-- Landing gear -->
+                    <rect x="30" y="35" width="2" height="3" fill="#222" />
+                    <rect x="50" y="35" width="2" height="3" fill="#222" />
+                    <rect x="28" y="38" width="6" height="1" fill="#111" />
+                    <rect x="48" y="38" width="6" height="1" fill="#111" />
+                </svg>
+                `;
+            };
+            
+            createRealisticHelicopter();
+            
+            // Responsive adjustments
+            window.addEventListener('resize', function() {
+                // Adjust game container height if needed
+                if (window.innerWidth <= 768) {
+                    gameContainer.style.height = '400px';
+                } else {
+                    gameContainer.style.height = '500px';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
